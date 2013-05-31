@@ -66,7 +66,6 @@ sub main {
 
     my %photo_dir = get_photo_dir( $config->{dir} );
     my $thumb_width = $config->{thumb}->{width};
-    my @write_log = ();
     foreach my $dir_YYYY (sort(keys %photo_dir)) {
         my $dir_ary_ref = $photo_dir{$dir_YYYY};
         foreach my $dir_YYYYMMDD (@{$dir_ary_ref}) {
@@ -90,15 +89,15 @@ sub main {
             }
 
             my @files = grep { /(\.jpeg|\.jpg)$/i; } get_files($src_dir);
+            my $cnt = scalar(@files);
+
+            my @write_log = ();
+            print STDERR sprintf( "%s (%2d/%2d)\r", $dst_dir, scalar(@write_log), scalar(@files) );
             foreach my $file_name (@files) {
                 my $src_path = $src_dir . '/' . $file_name;
                 my $dst_path = $dst_dir . '/' . $file_name;
 
-                my $image = Imager->new();
-                $image->read( file => $src_path )
-                    or die "Cannot read: ", $image->errstr;
-                my $thumb = $image->scale(
-                    xpixels => $thumb_width, ypixels => $thumb_width, qtype => 'mixing', type=>'min' );
+                my $thumb = create_thumb( $src_path, $thumb_width );
                 $thumb->write( file => $dst_path, jpegquality => JPEG_QUALITY )
                     or die $thumb->errstr;
 
@@ -107,11 +106,9 @@ sub main {
                     width => $thumb->getwidth(),
                     height => $thumb->getheight(),
                 };
+                print STDERR sprintf( "%s (%2d/%2d)\r", $dst_dir, scalar(@write_log), scalar(@files) );
             }
-
-            foreach (@write_log) {
-                print 'Created: ', $_->{path}, "\n";
-            }
+            printf( "%s (%2d/%2d)\n", $dst_dir, scalar(@write_log), scalar(@files) );
 
             exit(0);
             #
@@ -206,6 +203,19 @@ sub create_dir {
             }
         }
     }
+}
+
+sub create_thumb {
+    my $path = shift;
+    my $thumb_width = shift;
+
+    my $image = Imager->new();
+    $image->read( file => $path )
+        or die "Cannot read: ", $image->errstr;
+    my $thumb = $image->scale(
+        xpixels => $thumb_width, ypixels => $thumb_width, qtype => 'mixing', type=>'min' );
+
+    return $thumb;
 }
 
 __END__
