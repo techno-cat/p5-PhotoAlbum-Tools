@@ -20,15 +20,26 @@ use Pod::Usage qw/pod2usage/;
 
     # config file
     {
-        dir => '/Volumes/(Volume Name)/Foo/Bar',
-        thumb => {
-            dir => '~/Hoge/Huga',
-            width => 1200
-        }
+        dir => '/Users/(User Name)/foo/bar',
+        thumb => [
+            {   # Large
+                dir => '/Users/(User Name)/hoge/large',
+                width => 1200
+            },
+            {   # Midium
+                dir => '/Users/(User Name)/hoge/midium',
+                width => 400
+            },
+            {   # Small
+                dir => '/Users/(User Name)/hoge/small',
+                width => 100
+            }
+        ]
     };
 
 =cut
 
+my $dry_run = 0;
 main();
 
 sub main {
@@ -42,6 +53,7 @@ sub main {
 
     if ( $opt{'dry-run'} or $opt{n} ) {
         print 'this is dry-run.', "\n";
+        $dry_run = 1;
     }
 
     my $config = ();
@@ -54,67 +66,80 @@ sub main {
         $config = get_config( 'album.config');
     }
 
-    my $thumb_dir = $config->{thumb}->{dir};
-    if ( index($thumb_dir, '~') != -1 ) {
-        $thumb_dir = glob( $thumb_dir ); # チルダを展開
-    }
-
-    if ( not -e $thumb_dir ) {
-        print $thumb_dir, "\n";
-        create_dir( $thumb_dir );
-    }
-
-    my %photo_dir = get_photo_dir( $config->{dir} );
-    my $thumb_width = $config->{thumb}->{width};
-    foreach my $dir_YYYY (sort(keys %photo_dir)) {
-        my $dir_ary_ref = $photo_dir{$dir_YYYY};
+    my %photo_dir_tree = get_photo_dir_tree( $config->{dir} );
+    foreach my $dir_YYYY (sort(keys %photo_dir_tree)) {
+        my $dir_ary_ref = $photo_dir_tree{$dir_YYYY};
         foreach my $dir_YYYYMMDD (@{$dir_ary_ref}) {
             #
             # ここで公開したくないフォルダ名をフィルタリング
             #
             next if ( $dir_YYYYMMDD =~ /Human/ );
 
-            my $src_dir = join( '/', $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
-
             # todo:
             # フォルダの作成 & サムネイルの出力
             # フォルダの作成 & EXIFの出力
-            my $dst_dir = join( '/', $thumb_dir, $dir_YYYY, $dir_YYYYMMDD );
-            if ( not -e $dst_dir ) {
-                create_dir( $dst_dir );
-                print 'Created: ', $dst_dir, "\n";
-            }
-            else {
-                #print $dst_dir, " is already exists.\n";
-            }
-
-            my @files = grep { /(\.jpeg|\.jpg)$/i; } get_files($src_dir);
-            my $cnt = scalar(@files);
-
-            my @write_log = ();
-            print STDERR sprintf( "%s (%2d/%2d)\r", $dst_dir, scalar(@write_log), scalar(@files) );
-            foreach my $file_name (@files) {
-                my $src_path = $src_dir . '/' . $file_name;
-                my $dst_path = $dst_dir . '/' . $file_name;
-
-                my $thumb = create_thumb( $src_path, $thumb_width );
-                $thumb->write( file => $dst_path, jpegquality => JPEG_QUALITY )
-                    or die $thumb->errstr;
-
-                push @write_log, {
-                    path => $dst_path,
-                    width => $thumb->getwidth(),
-                    height => $thumb->getheight(),
-                };
-                print STDERR sprintf( "%s (%2d/%2d)\r", $dst_dir, scalar(@write_log), scalar(@files) );
-            }
-            printf( "%s (%2d/%2d)\n", $dst_dir, scalar(@write_log), scalar(@files) );
-
-            exit(0);
-            #
-            #print $dir, ':', scalar(@files), "\n";
+            write_thumb( $config, $dir_YYYY, $dir_YYYYMMDD );
         }
     }
+}
+
+sub write_thumb {
+    my $config = shift;
+    my $dir_YYYY = shift;
+    my $dir_YYYYMMDD = shift;
+
+    my $src_dir = join( '/', $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
+    my @src_files = grep { /(\.jpeg|\.jpg)$/i; } get_files($src_dir);
+
+    my @dst_info = ();
+    foreach my $thumb_config (@{$config->{thumb}}) {
+        my $dst_dir = join( '/', $thumb_config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
+        if ( not -e $dst_dir ) {
+            if ( not $dry_run ) {
+                create_dir( $dst_dir );
+            }
+            print 'Created: ', $dst_dir, "\n";
+        }
+        else {
+            #print $dst_dir, " is already exists.\n";
+        }
+
+        push @dst_info, {
+            dir => $dst_dir,
+            width => $thumb_config->{width}
+        };
+    }
+
+    my $cnt = scalar(@src_files) * scalar(@dst_info);
+    my @write_log = ();
+    print STDERR sprintf( "%s (%2d/%2d)\r", $src_dir, scalar(@write_log), $cnt );
+    foreach my $file_name (@src_files) {
+        my $src_path = $src_dir . '/' . $file_name;
+
+        my $image = Imager->new();
+        $image->read( file => $src_path )
+            or die "Cannot read: ", $image->errstr;
+
+        foreach my $info (@dst_info) {
+            my $dst_path = $info->{dir} . '/' . $file_name;
+
+            my $w = $info->{width};
+            my $thumb = $image->scale(
+                xpixels => $w, ypixels => $w, qtype => 'mixing', type=>'min' );
+            if ( not $dry_run ) {
+                $thumb->write( file => $dst_path, jpegquality => JPEG_QUALITY )
+                    or die $thumb->errstr;
+            }
+
+            push @write_log, {
+                path => $dst_path,
+                width => $thumb->getwidth(),
+                height => $thumb->getheight(),
+            };
+        }
+        print STDERR sprintf( "%s (%2d/%2d)\r", $src_dir, scalar(@write_log), $cnt );
+    }
+    printf( "%s (%2d/%2d)\n", $src_dir, scalar(@write_log), $cnt );
 }
 
 sub get_config {
@@ -127,7 +152,7 @@ sub get_config {
     return do $config_file;
 }
 
-sub get_photo_dir {
+sub get_photo_dir_tree {
     my $root_dir = shift;
     my $rule = shift;
 
@@ -203,19 +228,6 @@ sub create_dir {
             }
         }
     }
-}
-
-sub create_thumb {
-    my $path = shift;
-    my $thumb_width = shift;
-
-    my $image = Imager->new();
-    $image->read( file => $path )
-        or die "Cannot read: ", $image->errstr;
-    my $thumb = $image->scale(
-        xpixels => $thumb_width, ypixels => $thumb_width, qtype => 'mixing', type=>'min' );
-
-    return $thumb;
 }
 
 __END__
