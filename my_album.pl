@@ -1,3 +1,4 @@
+package My::Album;
 use strict;
 use warnings;
 use utf8;
@@ -6,111 +7,52 @@ use Encode;
 use Imager;
 use constant JPEG_QUALITY => 90;
 
-use Getopt::Long qw/:config posix_default no_ignore_case bundling auto_help/;
-use Pod::Usage qw/pod2usage/;
+our $dry_run = 0;
 
-=head1 DESCRIPTION
+sub exec_my_album {
+    my $config = shift;
 
-フォトアルバムの静的HTML出力ツール
+    my @ignore = ( exists $config->{ignore} ) ? @{$config->{ignore}} : ();
+    my @sub_dir_ary = grep {
+        my $sub_dir = $_;
+        #
+        # ここで公開したくないフォルダをフィルタリング
+        #
+        my $tmp = grep { $sub_dir =~ /$_/i; } @ignore;
+        ( $tmp == 0 );
+    } get_photo_dir($config->{dir}, $config->{rule});
 
-=head1 SYNOPSIS
+    foreach my $sub_dir (sort(@sub_dir_ary)) {
+        # todo:
+        # フォルダの作成 & サムネイルの出力
+        # フォルダの作成 & EXIFの出力
+        my @thumb_settings = map +{
+            dir => join( '/', $_->{dir}, $sub_dir ),
+            width => $_->{width}
+        }, @{$config->{thumb}};
 
-    $ perl my_album.pl [--dry-run | -n]
-    $ perl my_album.pl [--dry-run | -n] --config [config file]
-
-    # config file
-    {
-        dir => '/Users/(User Name)/foo/bar',
-        thumb => [
-            {   # Large
-                dir => '/Users/(User Name)/hoge/large',
-                width => 1200
-            },
-            {   # Midium
-                dir => '/Users/(User Name)/hoge/midium',
-                width => 400
-            },
-            {   # Small
-                dir => '/Users/(User Name)/hoge/small',
-                width => 100
+        foreach my $setting (@thumb_settings) {
+            if ( not -e $setting->{dir} ) {
+                if ( not $dry_run ) {
+                    create_dir( $setting->{dir} );
+                }
+                print 'Created: ', $setting->{dir}, "\n";
             }
-        ]
-    };
-
-=cut
-
-my $dry_run = 0;
-main();
-
-sub main {
-    my %opt = ();
-
-    GetOptions(
-        \%opt,
-        'config=s',
-        'dry-run|n'
-    ) or pod2usage( 1 );
-
-    if ( $opt{'dry-run'} or $opt{n} ) {
-        print 'this is dry-run.', "\n";
-        $dry_run = 1;
-    }
-
-    my $config = ();
-    if ( $opt{config} ) {
-        #print 'config=', $opt{config}, "\n"
-        $config = get_config( $opt{config} );
-    }
-    else {
-        #print 'config from album.config', "\n"
-        $config = get_config( 'album.config');
-    }
-
-    my %photo_dir_tree = get_photo_dir_tree( $config->{dir} );
-    foreach my $dir_YYYY (sort(keys %photo_dir_tree)) {
-        my $dir_ary_ref = $photo_dir_tree{$dir_YYYY};
-        foreach my $dir_YYYYMMDD (@{$dir_ary_ref}) {
-            #
-            # ここで公開したくないフォルダ名をフィルタリング
-            #
-            next if ( $dir_YYYYMMDD =~ /Human/ );
-
-            # todo:
-            # フォルダの作成 & サムネイルの出力
-            # フォルダの作成 & EXIFの出力
-            write_thumb( $config, $dir_YYYY, $dir_YYYYMMDD );
         }
+
+        my $photo_dir = join( '/', $config->{dir}, $sub_dir );
+        write_thumb( $photo_dir, \@thumb_settings );
     }
 }
 
 sub write_thumb {
-    my $config = shift;
-    my $dir_YYYY = shift;
-    my $dir_YYYYMMDD = shift;
+    my $src_dir = shift;
+    my $thumb_settings_ref = shift;
 
-    my $src_dir = join( '/', $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
     my @src_files = grep { /(\.jpeg|\.jpg)$/i; } get_files($src_dir);
+    my @thumb_settings = @{$thumb_settings_ref};
 
-    my @dst_info = ();
-    foreach my $thumb_config (@{$config->{thumb}}) {
-        my $dst_dir = join( '/', $thumb_config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
-        if ( not -e $dst_dir ) {
-            if ( not $dry_run ) {
-                create_dir( $dst_dir );
-            }
-            print 'Created: ', $dst_dir, "\n";
-        }
-        else {
-            #print $dst_dir, " is already exists.\n";
-        }
-
-        push @dst_info, {
-            dir => $dst_dir,
-            width => $thumb_config->{width}
-        };
-    }
-
-    my $cnt = scalar(@src_files) * scalar(@dst_info);
+    my $cnt = scalar(@src_files) * scalar(@thumb_settings);
     my @write_log = ();
     print STDERR sprintf( "%s (%2d/%2d)\r", $src_dir, scalar(@write_log), $cnt );
     foreach my $file_name (@src_files) {
@@ -120,83 +62,40 @@ sub write_thumb {
         $image->read( file => $src_path )
             or die "Cannot read: ", $image->errstr;
 
-        foreach my $info (@dst_info) {
-            my $dst_path = $info->{dir} . '/' . $file_name;
+        foreach my $setting (@thumb_settings) {
+            my $dst_path = join( '/', $setting->{dir}, $file_name );
 
-            my $w = $info->{width};
-            my $thumb = $image->scale(
-                xpixels => $w, ypixels => $w, qtype => 'mixing', type=>'min' );
             if ( not $dry_run ) {
+                my $w = $setting->{width};
+                my $thumb = $image->scale(
+                    xpixels => $w, ypixels => $w, qtype => 'mixing', type=>'min' );
                 $thumb->write( file => $dst_path, jpegquality => JPEG_QUALITY )
                     or die $thumb->errstr;
-            }
 
-            push @write_log, {
-                path => $dst_path,
-                width => $thumb->getwidth(),
-                height => $thumb->getheight(),
-            };
+                push @write_log, {
+                    path   => $dst_path,
+                    width  => $thumb->getwidth(),
+                    height => $thumb->getheight(),
+                };
+            }
+            else {
+                push @write_log, {
+                    path   => $dst_path,
+                    width  => 0,
+                    height => 0,
+                };
+            }
         }
         print STDERR sprintf( "%s (%2d/%2d)\r", $src_dir, scalar(@write_log), $cnt );
     }
-    printf( "%s (%2d/%2d)\n", $src_dir, scalar(@write_log), $cnt );
+    print STDERR sprintf( "%s (%2d/%2d)\n", $src_dir, scalar(@write_log), $cnt );
 }
 
-sub get_config {
-    my $config_file = shift;
-    
-    if ( not -e $config_file ) {
-        die "$config_file not found.";
-    }
-
-    return do $config_file;
-}
-
-sub get_photo_dir_tree {
-    my $root_dir = shift;
+sub get_photo_dir {
+    my $dir = shift;
     my $rule = shift;
 
-    if ( not $root_dir ) {
-        die 'Check your config.'
-    }
-
-    if ( not -e $root_dir ) {
-        die 'Photo directory not found.'
-    }
-
-#
-#   こんな感じのフォルダ構造を想定
-#   
-#   $root_dir
-#   ├── YYYY
-#   │   ├── YYYYMMDD
-#   │   ├── .
-#   │   ├── .
-#   │   ├── .
-#   │   └── YYYYMMDD
-#   ├── YYYY
-#   │   ├── YYYYMMDD
-#   │   ├── YYYYMMDD_hoge
-#   │   ├── .
-#   │   ├── .
-#   │   ├── .
-#   │   └── YYYYMMDD
-#   .
-#   .
-#   .
-
-    my @dir_YYYY = grep { /[\d]{4}/; } get_files($root_dir);
-
-    my %photo_dir = ();
-    foreach my $name (@dir_YYYY) {
-        if ( $name =~ /[\d]{4}/ ) {
-            my $sub_dir = join( '/', $root_dir, $name );
-            my @dir_YYYYMMDD = grep { /$name[\d]{4}/; } get_files($sub_dir);
-            $photo_dir{$name} = \@dir_YYYYMMDD;
-        }
-    }
-
-    return %photo_dir;
+    return grep { /$rule/i; } get_files($dir);
 }
 
 sub get_files {
@@ -223,11 +122,133 @@ sub create_dir {
         if ( not -e $path ) {
             print $path, ' not found.', "\n";
             if ( not mkdir($path) ) {
-                print $path, ' cannot create.', "\n";
+                print STDERR $path, ' cannot create.', "\n";
                 die $!;
             }
         }
     }
+}
+
+package main;
+use strict;
+use warnings;
+use utf8;
+
+use Getopt::Long qw/:config posix_default no_ignore_case bundling auto_help/;
+use Pod::Usage qw/pod2usage/;
+
+=head1 DESCRIPTION
+
+フォトアルバムの静的HTML出力ツール
+
+=head1 SYNOPSIS
+
+    $ perl my_album.pl [--dry-run | -n]
+    $ perl my_album.pl [--dry-run | -n] --config [config file]
+
+    # config file
+    {
+        dir => '/Users/(User Name)/foo/bar',
+        ignore => [ 'private' ], # 必須ではない（正規表現で指定）
+        rule => '[\d]{8}', # サブフォルダがYYYYMMDDの場合
+        thumb => [
+            {   # Large
+                dir => '/Users/(User Name)/hoge/large',
+                width => 1200
+            },
+            {   # Midium
+                dir => '/Users/(User Name)/hoge/midium',
+                width => 400
+            },
+            {   # Small
+                dir => '/Users/(User Name)/hoge/small',
+                width => 100
+            }
+        ]
+    };
+
+=cut
+
+main();
+
+sub main {
+    my %opt = ();
+
+    GetOptions(
+        \%opt,
+        'config=s',
+        'dry-run|n'
+    ) or pod2usage( 1 );
+
+    if ( $opt{'dry-run'} or $opt{n} ) {
+        print 'this is dry-run.', "\n";
+        $My::Album::dry_run = 1;
+    }
+
+    my $config = ();
+    if ( $opt{config} ) {
+        #print 'config=', $opt{config}, "\n"
+        $config = get_config( $opt{config} );
+    }
+    else {
+        #print 'config from album.config', "\n"
+        $config = get_config( 'album.config');
+    }
+
+    if ( not $config->{dir} ) {
+        die 'Check your config.';
+    }
+
+    if ( not -e $config->{dir} ) {
+        die 'Photo directory not found.'
+    }
+
+#
+#   こんな感じのフォルダ構造を想定
+#   
+#   $config->{dir}
+#   ├── YYYY
+#   │   ├── YYYYMMDD
+#   │   ├── .
+#   │   ├── .
+#   │   ├── .
+#   │   └── YYYYMMDD
+#   ├── YYYY
+#   │   ├── YYYYMMDD
+#   │   ├── YYYYMMDD_hoge
+#   │   ├── .
+#   │   ├── .
+#   │   ├── .
+#   │   └── YYYYMMDD
+#   .
+#   .
+#   .
+
+    foreach my $dir_YYYY (sort(My::Album::get_photo_dir($config->{dir}, '[\d]{4}'))) {
+        my @ignore = ( exists $config->{ignore} ) ? @{$config->{ignore}} : ();
+        my @thumb_settings = map +{
+            dir => join( '/', $_->{dir}, $dir_YYYY ),
+            width => $_->{width}
+        }, @{$config->{thumb}};
+        my $rule = $dir_YYYY . '[\d]{4}';
+
+        My::Album::exec_my_album({
+            dir    => join( '/', $config->{dir}, $dir_YYYY ),
+            ignore => \@ignore,
+            rule   => $config->{rule},
+            thumb  => \@thumb_settings,
+        });
+    }
+}
+
+sub get_config {
+    my $config_file = shift;
+
+    if ( not -e $config_file ) {
+        die "$config_file not found.";
+    }
+
+    return do $config_file;
 }
 
 __END__
