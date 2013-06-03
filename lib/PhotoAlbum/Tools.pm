@@ -51,7 +51,7 @@ sub write_thumb {
 
     print STDERR sprintf( "%s (%2d/%2d)\r", $photo_dir, scalar(@write_log), $cnt );
     foreach my $file_name (@src_files) {
-        my $src_path = $photo_dir . '/' . $file_name;
+        my $src_path = join( '/', $photo_dir, $file_name );
 
         my $image = Imager->new();
         $image->read( file => $src_path )
