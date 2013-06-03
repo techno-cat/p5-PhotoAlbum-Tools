@@ -84,6 +84,8 @@ sub write_thumb {
         print STDERR sprintf( "%s (%2d/%2d)\r", $photo_dir, scalar(@write_log), $cnt );
     }
     print STDERR sprintf( "%s (%2d/%2d)\n", $photo_dir, scalar(@write_log), $cnt );
+
+    return \@write_log;
 }
 
 # todo:
