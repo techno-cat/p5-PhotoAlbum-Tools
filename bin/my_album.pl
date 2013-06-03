@@ -100,13 +100,13 @@ sub main {
 
     my %write_logs = ();
     foreach my $dir_YYYY (sort(@dir_YYYY_ary)) {
-        my @dir_YYYYMMDD = PhotoAlbum::Tools::get_photo_dir({
+        my @dir_YYYYMMDD_ary = PhotoAlbum::Tools::get_photo_dir({
             dir  => join( '/', $config->{dir}, $dir_YYYY ),
             rule => $dir_YYYY . '[\d]{4}',
             ignore => ( exists $config->{ignore} ) ? $config->{ignore} : []
         });
 
-        foreach my $dir_YYYYMMDD (sort(@dir_YYYYMMDD)) {
+        foreach my $dir_YYYYMMDD (sort(@dir_YYYYMMDD_ary)) {
             my @thumb_settings = map +{
                 dir => join( '/', $_->{dir}, $dir_YYYY, $dir_YYYYMMDD ),
                 width => $_->{width}
