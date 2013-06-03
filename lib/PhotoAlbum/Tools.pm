@@ -71,6 +71,7 @@ sub write_thumb {
                     path   => $dst_path,
                     width  => $thumb->getwidth(),
                     height => $thumb->getheight(),
+                    jpegquality => JPEG_QUALITY
                 };
             }
             else {
@@ -78,6 +79,7 @@ sub write_thumb {
                     path   => $dst_path,
                     width  => 0,
                     height => 0,
+                    jpegquality => JPEG_QUALITY
                 };
             }
 
