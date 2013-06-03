@@ -112,8 +112,10 @@ sub main {
             }, @{$config->{thumb}};
 
             my $photo_dir = join( '/', $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
-            PhotoAlbum::Tools::write_thumb(
-                { dir => $photo_dir }, \@thumb_settings );
+            PhotoAlbum::Tools::write_thumb({
+                dir => $photo_dir,
+                thumb => \@thumb_settings
+            });
         }
     }
 }

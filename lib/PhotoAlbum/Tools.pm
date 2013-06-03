@@ -31,12 +31,12 @@ sub get_photo_dir {
 # フォルダの作成 & サムネイルの出力
 sub write_thumb {
     my $args = shift;
-    my $thumb_settings_ref = shift;
 
     my $photo_dir = ( exists $args->{dir} ) ? $args->{dir} : die '{dir} is required';
     my $rule = ( exists $args->{rule} ) ? $args->{rule} : '(\.jpeg|\.jpg)$'; # for JPEG
+    my @thumb_settings = ( exists $args->{thumb} ) ? @{$args->{thumb}} : die '{thumb} is required';
 
-    foreach my $setting (@{$thumb_settings_ref}) {
+    foreach my $setting (@thumb_settings) {
         if ( not -e $setting->{dir} ) {
             if ( not $dry_run ) {
                 _create_dir( $setting->{dir} );
@@ -46,8 +46,9 @@ sub write_thumb {
     }
 
     my @src_files = grep { /$rule/i; } _get_files($photo_dir);
-    my $cnt = scalar(@src_files) * scalar(@{$thumb_settings_ref});
+    my $cnt = scalar(@src_files) * scalar(@thumb_settings);
     my @write_log = ();
+
     print STDERR sprintf( "%s (%2d/%2d)\r", $photo_dir, scalar(@write_log), $cnt );
     foreach my $file_name (@src_files) {
         my $src_path = $photo_dir . '/' . $file_name;
@@ -56,7 +57,7 @@ sub write_thumb {
         $image->read( file => $src_path )
             or die "Cannot read: ", $image->errstr;
 
-        foreach my $setting (@{$thumb_settings_ref}) {
+        foreach my $setting (@thumb_settings) {
             my $dst_path = join( '/', $setting->{dir}, $file_name );
 
             if ( not $dry_run ) {
