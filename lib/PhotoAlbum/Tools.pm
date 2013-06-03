@@ -136,7 +136,7 @@ PhotoAlbum::Tools - It's new $module
 
 =head1 DESCRIPTION
 
-PhotoAlbum::Tools support your to create photo contents.
+PhotoAlbum::Tools supports your photo contents.
 
 =head1 LICENSE
 
@@ -147,6 +147,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-techno-cat E<lt>techno.cat.miau@gmail.comE<gt>
+techno-cat E<lt>techno(dot)cat(dot)miau(at)gmail(dot)comE<gt>
 
 =cut

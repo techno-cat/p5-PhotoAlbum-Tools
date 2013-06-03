@@ -8,7 +8,7 @@ PhotoAlbum::Tools - It's new $module
 
 # DESCRIPTION
 
-PhotoAlbum::Tools support your to create photo contents.
+PhotoAlbum::Tools supports your photo contents.
 
 # LICENSE
 
@@ -19,4 +19,4 @@ it under the same terms as Perl itself.
 
 # AUTHOR
 
-techno-cat <techno.cat.miau@gmail.com>
+techno-cat <techno(dot)cat(dot)miau(at)gmail(dot)com>

@@ -1,7 +1,7 @@
 {
    "abstract" : "It's new $module",
    "author" : [
-      "techno-cat <techno.cat.miau@gmail.com>"
+      "techno-cat <techno(dot)cat(dot)miau(at)gmail(dot)com>"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Minilla/v0.4.3, CPAN::Meta::Converter version 2.130880",
@@ -63,5 +63,8 @@
          "web" : "https://github.com/techno-cat/p5-PhotoAlbum-Tools"
       }
    },
-   "version" : "0.01"
+   "version" : "0.01",
+   "x_contributors" : [
+      "techno-cat <techno.cat.miau@gmail.com>"
+   ]
 }
