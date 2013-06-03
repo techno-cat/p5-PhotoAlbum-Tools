@@ -98,6 +98,7 @@ sub main {
         rule => '[\d]{4}'
     });
 
+    my %write_logs = ();
     foreach my $dir_YYYY (sort(@dir_YYYY_ary)) {
         my @dir_YYYYMMDD = PhotoAlbum::Tools::get_photo_dir({
             dir  => join( '/', $config->{dir}, $dir_YYYY ),
@@ -112,11 +113,20 @@ sub main {
             }, @{$config->{thumb}};
 
             my $photo_dir = join( '/', $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
-            PhotoAlbum::Tools::write_thumb({
+            my $write_log = PhotoAlbum::Tools::write_thumb({
                 dir => $photo_dir,
                 thumb => \@thumb_settings
             });
+
+            $write_logs{$photo_dir} = $write_log;
         }
+    }
+
+    print 'write_logs count: ', scalar(keys %write_logs), "\n";
+    foreach my $key (keys %write_logs) {
+        my $cnt = scalar(@{$write_logs{$key}});
+        $key =~ s/$config->{dir}//;
+        printf( "%s => %3d\n", $key, $cnt );
     }
 }
 
