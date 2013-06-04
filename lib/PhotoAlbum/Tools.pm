@@ -34,7 +34,7 @@ sub write_thumb {
     my $args = shift;
 
     my $photo_dir = ( exists $args->{dir} ) ? $args->{dir} : die '{dir} is required';
-    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '(\.jpeg|\.jpg)$'; # for JPEG
+    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '(\.jpeg|\.jpg)$'; # Default: JPEG file
     my @thumb_settings = ( exists $args->{thumb} ) ? @{$args->{thumb}} : die '{thumb} is required';
 
     foreach my $setting (@thumb_settings) {
