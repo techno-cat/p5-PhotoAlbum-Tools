@@ -20,12 +20,13 @@ sub get_photo_dir {
 
     return grep {
         my $sub_dir = $_;
-        #
-        # ここで公開したくないフォルダをフィルタリング
-        #
-        my $tmp = grep { $sub_dir =~ /$_/i; } @ignore;
-        ( $tmp == 0 );
-    } grep { /$rule/i; } _get_files($photo_dir);
+        if ( grep { $sub_dir =~ /$_/i; } @ignore ) {
+            0; # 公開したくないフォルダ
+        }
+        else {
+            ( -d join('/', $photo_dir, $sub_dir) );
+        }
+    } _get_files($photo_dir, $rule);
 }
 
 # フォルダの作成 & サムネイルの出力
@@ -45,7 +46,7 @@ sub write_thumb {
         }
     }
 
-    my @src_files = grep { /$rule/i; } _get_files($photo_dir);
+    my @src_files = _get_files( $photo_dir, $rule );
     my $cnt = scalar(@src_files) * scalar(@thumb_settings);
     my @write_log = ();
 
@@ -99,6 +100,7 @@ sub write_exif {
 
 sub _get_files {
     my $dir = shift;
+    my $rule = shift;
 
     opendir( my $dh, $dir );
 
@@ -107,7 +109,7 @@ sub _get_files {
 
     closedir( $dh );
 
-    return @files;
+    return grep { /$rule/i; } @files;
 }
 
 # todo:
