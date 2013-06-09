@@ -7,6 +7,7 @@ use Encode;
 
 use Imager;
 use constant JPEG_QUALITY => 90;
+use File::Path qw(make_path);
 
 our $VERSION = "0.01";
 our $dry_run = 0;
@@ -112,20 +113,26 @@ sub _get_files {
     return grep { /$rule/i; } @files;
 }
 
-# todo:
-# Path::Classで置き換え
 sub _create_dir {
-    my @wk = split( /\//, $_[0] );
-    my $path = shift @wk;
+    my $path = shift;
 
-    foreach my $dir (@wk) {
-        $path .= ( '/' . $dir );
-        if ( not -e $path ) {
-            print $path, ' not found.', "\n";
-            if ( not mkdir($path) ) {
-                print STDERR $path, ' cannot create.', "\n";
-                die $!;
-            }
+    my $err;
+    make_path( $path, { error => \$err } );
+    if ( @{$err} ) {
+        _dump_error( $err );
+        die 'Cannot create derectory.';
+    }
+}
+
+sub _dump_error {
+    my $err = shift;
+    foreach my $diag (@{$err}) {
+        my ($file, $message) = %{$diag};
+        if ( $file eq '' ) {
+            warn "general error: $message\n";
+        }
+        else {
+            warn "problem unlinking $file: $message\n";
         }
     }
 }
