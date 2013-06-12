@@ -71,6 +71,7 @@ sub write_thumb {
                     or die $thumb->errstr;
 
                 push @write_log, {
+                    key    => $setting->{key},
                     path   => $dst_path,
                     width  => $thumb->getwidth(),
                     height => $thumb->getheight(),
@@ -79,6 +80,7 @@ sub write_thumb {
             }
             else {
                 push @write_log, {
+                    key    => $setting->{key},
                     path   => $dst_path,
                     width  => 0,
                     height => 0,
