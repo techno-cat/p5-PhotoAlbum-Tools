@@ -11,10 +11,8 @@ use_ok $_ for qw(
     PhotoAlbum::Tools
 );
 
-my $work_dir = tempdir();
-if ( not -e $work_dir ) {
-    die 'Cannot create work directory.';
-}
+my $work_dir = tempdir( 'photo_album_XXXX', TMPDIR => 1, CLEANUP => 1 )
+    or die 'Cannot create temp directory.';
 
 my @dirs = File::Spec->splitdir( $work_dir );
 my @sub_dirs = ( 'a', '1', '20130101_public', '20130102_private' );
@@ -66,16 +64,6 @@ foreach my $dir (@sub_dirs) {
 
     is scalar(@dir_ary), 1, 'select by rule with ignore..';
     is $dir_ary[0], '20130101_public', 'selected directory name is "20130101_public".';
-}
-
-my $err;
-remove_tree( $work_dir, {
-    verbose => 1,
-    error   => \$err
-});
-if ( @{$err} ) {
-    dump_error( $err );
-    die 'Sorry, please delete temp directory.', "\n", $work_dir, "\n";
 }
 
 sub dump_error {
