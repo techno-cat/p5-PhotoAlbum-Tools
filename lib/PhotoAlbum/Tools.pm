@@ -7,6 +7,7 @@ use Encode;
 
 use Imager;
 use constant JPEG_QUALITY => 90;
+use File::Spec;
 use File::Path qw(make_path);
 
 our $VERSION = "0.01";
@@ -25,7 +26,7 @@ sub get_photo_dir {
             0; # 公開したくないフォルダ
         }
         else {
-            ( -d join('/', $photo_dir, $sub_dir) );
+            ( -d File::Spec->catdir($photo_dir, $sub_dir) );
         }
     } _get_files($photo_dir, $rule);
 }
@@ -53,14 +54,14 @@ sub write_thumb {
 
     print STDERR sprintf( "%s (%2d/%2d)\r", $photo_dir, scalar(@write_log), $cnt );
     foreach my $file_name (@src_files) {
-        my $src_path = join( '/', $photo_dir, $file_name );
+        my $src_path = File::Spec->catdir( $photo_dir, $file_name );
 
         my $image = Imager->new();
         $image->read( file => $src_path )
             or die "Cannot read: ", $image->errstr;
 
         foreach my $setting (@thumb_settings) {
-            my $dst_path = join( '/', $setting->{dir}, $file_name );
+            my $dst_path = File::Spec->catdir( $setting->{dir}, $file_name );
 
             if ( not $dry_run ) {
                 my $w = $setting->{width};
