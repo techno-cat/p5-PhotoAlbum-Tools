@@ -47,6 +47,9 @@
       },
       "test" : {
          "requires" : {
+            "File::Path" : "2.08_01",
+            "Imager" : "0.94",
+            "Test::Exception" : "0.31",
             "Test::More" : "0.98"
          }
       }
