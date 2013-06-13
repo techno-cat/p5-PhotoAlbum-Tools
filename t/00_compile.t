@@ -31,7 +31,6 @@ foreach my $dir (@sub_dirs) {
         my $image = Imager->new( xsize => 640, ysize => 480 );
         $image->write( file => $path )
             or die 'Cannot save $path: ', $image->errstr;
-    #    warn 'Created: ', $path, "\n";
     }
 }
 
