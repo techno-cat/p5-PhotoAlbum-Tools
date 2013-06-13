@@ -110,6 +110,7 @@ sub main {
             ignore => ( exists $config->{ignore} ) ? $config->{ignore} : []
         });
 
+        my %logs = ();
         foreach my $dir_YYYYMMDD (sort(@dir_YYYYMMDD_ary)) {
             my @thumb_settings = map {
                 my $setting = $config->{thumb}->{$_};
@@ -121,13 +122,13 @@ sub main {
             } keys %{$config->{thumb}};
 
             my $photo_dir = File::Spec->catdir( $config->{dir}, $dir_YYYY, $dir_YYYYMMDD );
-            my $write_log = PhotoAlbum::Tools::write_thumb({
+            $logs{$dir_YYYYMMDD} = PhotoAlbum::Tools::write_thumb({
                 dir => $photo_dir,
                 thumb => \@thumb_settings
             });
-
-            $write_logs{$photo_dir} = $write_log;
         }
+
+        $write_logs{$dir_YYYY} = \%logs;
     }
 
     write_photo_album({
@@ -150,27 +151,32 @@ sub write_photo_album {
         path => [ $args->{templ_dir} ],
     );
 
-    foreach my $key (keys %{$args->{logs}}) {
+    foreach my $dir_YYYY (keys %{$args->{logs}}) {
+        foreach my $dir_YYYYMMDD (keys %{$args->{logs}->{$dir_YYYY}}) {
 
-        # データ構造の変換
-        my %photo_urls = ();
-        foreach my $write_log (@{$args->{logs}->{$key}}) {
-            my ($volume, $directories, $file) = File::Spec->splitpath( $write_log->{path} );
-            if ( not (exists $photo_urls{$file}) ) {
-                $photo_urls{$file} = {};
+            # データ構造の変換
+            my %photo_urls = ();
+            foreach my $write_log (@{$args->{logs}->{$dir_YYYY}->{$dir_YYYYMMDD}}) {
+                my ($volume, $directories, $file) = File::Spec->splitpath( $write_log->{path} );
+                if ( not (exists $photo_urls{$file}) ) {
+                    $photo_urls{$file} = {};
+                }
+
+                # todo:
+                # HTMLから参照できるように、相対パスに変換する
+
+                $photo_urls{$file}->{$write_log->{key}} = $write_log->{path};
             }
 
-            $photo_urls{$file}->{$write_log->{key}} = $write_log->{path};
+            my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
+            my $content = $xslate->render( $args->{templates}->{'YYYY'}, {
+                title => join('/', @tmp),
+                urls  => \%photo_urls
+            });
+
+            print encode_utf8( $content );
+            return;
         }
-
-        $key =~ s/$args->{photo_dir}//;
-        my $content = $xslate->render( $args->{templates}->{'YYYY'}, {
-            title => $key,
-            urls  => \%photo_urls
-        });
-
-        print encode_utf8( $content );
-        last;
     }
 }
 
