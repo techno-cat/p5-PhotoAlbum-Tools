@@ -19,7 +19,12 @@ my @sub_dirs = ( 'a', '1', '20130101_public', '20130102_private' );
 
 foreach my $dir (@sub_dirs) {
     my @photo_dir = ( @dirs, $dir );
-    make_path( File::Spec->catdir(@photo_dir) );
+    my $err;
+    make_path( File::Spec->catdir(@photo_dir), { error => \$err } );
+    if ( @{$err} ) {
+        dump_error( $err );
+        die 'Cannot create derectory.';
+    }
 
     my @test_paths = (
         File::Spec->catfile( @photo_dir, 'a.jpg'  ),
