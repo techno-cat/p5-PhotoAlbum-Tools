@@ -6,6 +6,7 @@ use Text::Xslate;
 use FindBin qw($Bin);
 use Encode;
 use File::Spec;
+use File::Path qw(make_path);
 
 use Getopt::Long qw/:config posix_default no_ignore_case bundling auto_help/;
 use Pod::Usage qw/pod2usage/;
@@ -36,6 +37,23 @@ use Pod::Usage qw/pod2usage/;
             small => {
                 dir => '/Users/(User Name)/hoge/small',
                 width => 100
+            }
+        },
+        pages => {
+            'index' => {
+                dir  => '/Users/(User Name)/hoge/album',
+                file => 'index.html',
+                template => 'index.tx'
+            },
+            'YYYY' => {
+                dir  => '/Users/(User Name)/hoge/album/YYYY',
+                file => 'index.html',
+                template => 'YYYY.tx'
+            },
+            'YYYYMMDD' => {
+                dir  => '/Users/(User Name)/hoge/album/YYYY',
+                file => 'YYYYMMDD.html',
+                template => 'YYYYMMDD.tx'
             }
         }
     };
@@ -135,11 +153,7 @@ sub main {
         photo_dir => $config->{dir},
         thumb     => $config->{thumb},
         templ_dir => "$Bin/template",
-        templates => {
-            'index'     => 'index.tx',
-            'YYYY'      => 'YYYY.tx',
-            'YYYYMMDD'  => 'YYYYMMDD.tx'
-        },
+        pages     => $config->{pages},
         logs => \%write_logs
     });
 }
@@ -151,8 +165,27 @@ sub write_photo_album {
         path => [ $args->{templ_dir} ],
     );
 
+    # todo: index.htmlの出力
+
     foreach my $dir_YYYY (keys %{$args->{logs}}) {
         foreach my $dir_YYYYMMDD (keys %{$args->{logs}->{$dir_YYYY}}) {
+            # YYYYMMDD.htmlの出力
+            my %page = %{$args->{pages}->{'YYYYMMDD'}};
+            my ($dir, $file) = ($page{dir}, $page{file});
+            $dir =~ s/YYYYMMDD/$dir_YYYYMMDD/g;
+            $dir =~ s/YYYY/$dir_YYYY/g;
+            $file =~ s/YYYYMMDD/$dir_YYYYMMDD/g;
+            $file =~ s/YYYY/$dir_YYYY/g;
+            my $path = File::Spec->catfile( $dir, $file );
+
+            if ( not -e $dir ) {
+                my $err;
+                make_path( $dir, { error => \$err } );
+                if ( @{$err} ) {
+                    dump_error( $err );
+                    die 'Cannot create derectory.';
+                }
+            }
 
             # データ構造の変換
             my %photo_urls = ();
@@ -162,21 +195,22 @@ sub write_photo_album {
                     $photo_urls{$file} = {};
                 }
 
-                # todo:
-                # HTMLから参照できるように、相対パスに変換する
-
-                $photo_urls{$file}->{$write_log->{key}} = $write_log->{path};
+                my $url = File::Spec->abs2rel( $write_log->{path}, $dir );
+                $photo_urls{$file}->{$write_log->{key}} = $url;
             }
 
             my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
-            my $content = $xslate->render( $args->{templates}->{'YYYY'}, {
+            my $content = $xslate->render( $page{template}, {
                 title => join('/', @tmp),
                 urls  => \%photo_urls
             });
 
-            print encode_utf8( $content );
-            return;
+            open( my $fp, '>', $path ) or die "cannot open > $path: $!";
+            print $fp encode_utf8( $content );
+            close( $fp );
         }
+
+        # todo: YYYY.htmlの出力
     }
 }
 
@@ -188,6 +222,19 @@ sub get_config {
     }
 
     return do $config_file;
+}
+
+sub dump_error {
+    my $err = shift;
+    foreach my $diag (@{$err}) {
+        my ($file, $message) = %{$diag};
+        if ( $file eq '' ) {
+            warn "general error: $message\n";
+        }
+        else {
+            warn "problem unlinking $file: $message\n";
+        }
+    }
 }
 
 __END__
