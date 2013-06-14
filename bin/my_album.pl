@@ -166,6 +166,8 @@ sub write_photo_album {
     );
 
     foreach my $dir_YYYY (sort keys %{$args->{logs}}) {
+
+        my @pages = ();
         foreach my $dir_YYYYMMDD (sort keys %{$args->{logs}->{$dir_YYYY}}) {
             # YYYYMMDD.htmlの出力
             my $page = replaced_page( $args->{pages}->{'YYYYMMDD'}, [
@@ -186,12 +188,16 @@ sub write_photo_album {
             }
 
             my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
-            my $content = $xslate->render( $page->{template}, {
+            $page->{content} = $xslate->render( $page->{template}, {
                 title => join('/', @tmp),
                 urls  => \%photo_urls
             });
 
-            write_page( $page, $content );
+            push @pages, $page;
+        }
+
+        if ( @pages ) {
+            write_pages( \@pages );
         }
 
         # todo: YYYY.htmlの出力
@@ -200,23 +206,26 @@ sub write_photo_album {
     # todo: index.htmlの出力
 }
 
-sub write_page {
-    my $page = shift;
-    my $content = shift;
+sub write_pages {
+    my $pages_ref = shift;
 
-    if ( not -e $page->{dir} ) {
+    my $dir = $pages_ref->[0]->{dir};
+    if ( not -e $dir ) {
         my $err;
-        make_path( $page->{dir}, { error => \$err } );
+        make_path( $dir, { error => \$err } );
         if ( @{$err} ) {
             dump_error( $err );
             die 'Cannot create derectory.';
         }
     }
 
-    my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
-    open( my $fp, '>', $path ) or die "cannot open > $path: $!";
-    print $fp encode_utf8( $content );
-    close( $fp );
+    foreach my $page (@{$pages_ref}) {
+        my $content = shift;
+        my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
+        open( my $fp, '>', $path ) or die "cannot open > $path: $!";
+        print $fp encode_utf8( $page->{content} );
+        close( $fp );
+    }
 }
 
 sub replaced_page {
