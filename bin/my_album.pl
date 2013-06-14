@@ -165,22 +165,17 @@ sub write_photo_album {
         path => [ $args->{templ_dir} ],
     );
 
-    # todo: index.htmlの出力
-
-    foreach my $dir_YYYY (keys %{$args->{logs}}) {
-        foreach my $dir_YYYYMMDD (keys %{$args->{logs}->{$dir_YYYY}}) {
+    foreach my $dir_YYYY (sort keys %{$args->{logs}}) {
+        foreach my $dir_YYYYMMDD (sort keys %{$args->{logs}->{$dir_YYYY}}) {
             # YYYYMMDD.htmlの出力
-            my %page = %{$args->{pages}->{'YYYYMMDD'}};
-            my ($dir, $file) = ($page{dir}, $page{file});
-            $dir =~ s/YYYYMMDD/$dir_YYYYMMDD/g;
-            $dir =~ s/YYYY/$dir_YYYY/g;
-            $file =~ s/YYYYMMDD/$dir_YYYYMMDD/g;
-            $file =~ s/YYYY/$dir_YYYY/g;
-            my $path = File::Spec->catfile( $dir, $file );
+            my $page = replaced_page( $args->{pages}->{'YYYYMMDD'}, [
+                { 'YYYY' => $dir_YYYY },
+                { 'YYYYMMDD' => $dir_YYYYMMDD }
+            ]);
 
-            if ( not -e $dir ) {
+            if ( not -e $page->{dir} ) {
                 my $err;
-                make_path( $dir, { error => \$err } );
+                make_path( $page->{dir}, { error => \$err } );
                 if ( @{$err} ) {
                     dump_error( $err );
                     die 'Cannot create derectory.';
@@ -195,16 +190,17 @@ sub write_photo_album {
                     $photo_urls{$file} = {};
                 }
 
-                my $url = File::Spec->abs2rel( $write_log->{path}, $dir );
+                my $url = File::Spec->abs2rel( $write_log->{path}, $page->{dir} );
                 $photo_urls{$file}->{$write_log->{key}} = $url;
             }
 
             my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
-            my $content = $xslate->render( $page{template}, {
+            my $content = $xslate->render( $page->{template}, {
                 title => join('/', @tmp),
                 urls  => \%photo_urls
             });
 
+            my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
             open( my $fp, '>', $path ) or die "cannot open > $path: $!";
             print $fp encode_utf8( $content );
             close( $fp );
@@ -212,6 +208,21 @@ sub write_photo_album {
 
         # todo: YYYY.htmlの出力
     }
+
+    # todo: index.htmlの出力
+}
+
+sub replaced_page {
+    my %page = %{$_[0]};
+    my $replace_settings_ref = $_[1];
+
+    foreach my $setting (@{$replace_settings_ref}) {
+        my ($from, $to) = %{$setting};
+        $page{dir} =~ s/$from/$to/g;
+        $page{file} =~ s/$from/$to/g;
+    }
+
+    return \%page;
 }
 
 sub get_config {
