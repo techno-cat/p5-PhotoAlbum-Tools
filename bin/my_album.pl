@@ -173,15 +173,6 @@ sub write_photo_album {
                 { 'YYYYMMDD' => $dir_YYYYMMDD }
             ]);
 
-            if ( not -e $page->{dir} ) {
-                my $err;
-                make_path( $page->{dir}, { error => \$err } );
-                if ( @{$err} ) {
-                    dump_error( $err );
-                    die 'Cannot create derectory.';
-                }
-            }
-
             # データ構造の変換
             my %photo_urls = ();
             foreach my $write_log (@{$args->{logs}->{$dir_YYYY}->{$dir_YYYYMMDD}}) {
@@ -200,16 +191,32 @@ sub write_photo_album {
                 urls  => \%photo_urls
             });
 
-            my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
-            open( my $fp, '>', $path ) or die "cannot open > $path: $!";
-            print $fp encode_utf8( $content );
-            close( $fp );
+            write_page( $page, $content );
         }
 
         # todo: YYYY.htmlの出力
     }
 
     # todo: index.htmlの出力
+}
+
+sub write_page {
+    my $page = shift;
+    my $content = shift;
+
+    if ( not -e $page->{dir} ) {
+        my $err;
+        make_path( $page->{dir}, { error => \$err } );
+        if ( @{$err} ) {
+            dump_error( $err );
+            die 'Cannot create derectory.';
+        }
+    }
+
+    my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
+    open( my $fp, '>', $path ) or die "cannot open > $path: $!";
+    print $fp encode_utf8( $content );
+    close( $fp );
 }
 
 sub replaced_page {
