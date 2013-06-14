@@ -7,8 +7,8 @@
 <body>
 <h1><: $title :></h1>
 <ol>
-    : for $urls.keys() -> $file {
-    <li><a href="<: $urls[$file].large :>"><img src="<: $urls[$file].small :>" /></a></li>
+    : for $urls -> $url {
+    <li><a href="<: $url.large :>"><img src="<: $url.small :>" /></a></li>
     : }
 </ol>
 </body>

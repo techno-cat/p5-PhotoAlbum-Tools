@@ -154,30 +154,27 @@ sub main {
         thumb     => $config->{thumb},
         templ_dir => "$Bin/template",
         pages     => $config->{pages},
-        logs => \%write_logs
+        logs      => \%write_logs
     });
 }
 
-sub write_photo_album {
-    my $args = shift;
+sub create_album_source {
+    my $pages_ref = shift;
+    my $logs_ref = shift;
 
-    my $xslate = Text::Xslate->new(
-        path => [ $args->{templ_dir} ],
-    );
-
-    foreach my $dir_YYYY (sort keys %{$args->{logs}}) {
+    my @pages_YYYY = ();
+    foreach my $dir_YYYY (sort keys %{$logs_ref}) {
 
         my @pages = ();
-        foreach my $dir_YYYYMMDD (sort keys %{$args->{logs}->{$dir_YYYY}}) {
-            # YYYYMMDD.htmlの出力
-            my $page = replaced_page( $args->{pages}->{'YYYYMMDD'}, [
+        foreach my $dir_YYYYMMDD (sort keys %{$logs_ref->{$dir_YYYY}}) {
+            my $page = replaced_page( $pages_ref->{'YYYYMMDD'}, [
                 { 'YYYYMMDD' => $dir_YYYYMMDD },
                 { 'YYYY' => $dir_YYYY }
             ]);
 
             # データ構造の変換
             my %photo_urls = ();
-            foreach my $write_log (@{$args->{logs}->{$dir_YYYY}->{$dir_YYYYMMDD}}) {
+            foreach my $write_log (@{$logs_ref->{$dir_YYYY}->{$dir_YYYYMMDD}}) {
                 my ($volume, $directories, $file) = File::Spec->splitpath( $write_log->{path} );
                 if ( not (exists $photo_urls{$file}) ) {
                     $photo_urls{$file} = {};
@@ -187,20 +184,52 @@ sub write_photo_album {
                 $photo_urls{$file}->{$write_log->{key}} = $url;
             }
 
+            my @sorted_urls = map { $photo_urls{$_}; } sort keys %photo_urls;
             my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
-            $page->{content} = $xslate->render( $page->{template}, {
-                title => join('/', @tmp),
-                urls  => \%photo_urls
-            });
 
+            $page->{urls} = \@sorted_urls;
+            $page->{date} = { YYYY => $tmp[0], MM => $tmp[1], DD => $tmp[2] };
             push @pages, $page;
         }
 
         if ( @pages ) {
-            write_pages( \@pages );
+            my $page = replaced_page( $pages_ref->{'YYYY'}, [
+                { 'YYYY' => $dir_YYYY }
+            ]);
+
+            $page->{children} = \@pages;
+            push @pages_YYYY, $page;
+        }
+    }
+
+    return \@pages_YYYY;
+}
+
+sub write_photo_album {
+    my $args = shift;
+
+    my $album_source = create_album_source( $args->{pages}, $args->{logs} );
+    my $xslate = Text::Xslate->new(
+        path => [ $args->{templ_dir} ]
+    );
+
+    foreach my $page_YYYY (@{$album_source}) {
+        # todo: YYYY.htmlの出力
+
+        # YYYYMMDD.htmlの出力
+        my @pages_YYYYMMDD = ();
+        foreach my $page (@{$page_YYYY->{children}}) {
+            my $date = $page->{date};
+            $page->{content} = $xslate->render( $page->{template}, {
+                title => join( '/', $date->{YYYY}, $date->{MM}, $date->{DD} ),
+                urls  => $page->{urls}
+            });
+            push @pages_YYYYMMDD, $page;
+            print File::Spec->catfile($page->{dir}, $page->{file}), "\n"
         }
 
-        # todo: YYYY.htmlの出力
+        print File::Spec->catfile($page_YYYY->{dir}, $page_YYYY->{file}), ': ', scalar(@pages_YYYYMMDD), "\n";
+        write_pages( \@pages_YYYYMMDD );
     }
 
     # todo: index.htmlの出力
