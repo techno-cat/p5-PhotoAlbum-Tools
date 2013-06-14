@@ -169,8 +169,8 @@ sub write_photo_album {
         foreach my $dir_YYYYMMDD (sort keys %{$args->{logs}->{$dir_YYYY}}) {
             # YYYYMMDD.htmlの出力
             my $page = replaced_page( $args->{pages}->{'YYYYMMDD'}, [
-                { 'YYYY' => $dir_YYYY },
-                { 'YYYYMMDD' => $dir_YYYYMMDD }
+                { 'YYYYMMDD' => $dir_YYYYMMDD },
+                { 'YYYY' => $dir_YYYY }
             ]);
 
             # データ構造の変換
