@@ -240,12 +240,7 @@ sub write_pages {
 
     my $dir = $pages_ref->[0]->{dir};
     if ( not -e $dir ) {
-        my $err;
-        make_path( $dir, { error => \$err } );
-        if ( @{$err} ) {
-            dump_error( $err );
-            die 'Cannot create derectory.';
-        }
+        make_dir( $dir );
     }
 
     foreach my $page (@{$pages_ref}) {
@@ -278,6 +273,15 @@ sub get_config {
     }
 
     return do $config_file;
+}
+
+sub make_dir {
+    my $err;
+    make_path( $_[0], { error => \$err } );
+    if ( @{$err} ) {
+        dump_error( $err );
+        die 'Cannot create derectory.';
+    }
 }
 
 sub dump_error {
