@@ -226,13 +226,27 @@ sub create_album_source {
 }
 
 sub write_photo_album {
-    my $args = shift;
+    my $args_ref = shift;
 
-    my $album_source = create_album_source( $args->{pages}, $args->{logs} );
+    my $album_source = create_album_source( $args_ref->{pages}, $args_ref->{logs} );
     my $xslate = Text::Xslate->new(
-        path => [ $args->{templ_dir} ]
+        path => [ $args_ref->{templ_dir} ]
     );
 
+    # パス情報の確定
+    my $page_index = $args_ref->{pages}->{'index'};
+    $page_index->{path} = File::Spec->catfile( $page_index->{dir}, $page_index->{file} );
+#    print "$page_index->{path}\n";
+    foreach my $page_YYYY (@{$album_source}) {
+        $page_YYYY->{path} = File::Spec->catfile( $page_YYYY->{dir}, $page_YYYY->{file} );
+#        print "$page_YYYY->{path}\n";
+        foreach my $page (@{$page_YYYY->{children}}) {
+            $page->{path} = File::Spec->catfile( $page->{dir}, $page->{file} );
+#            print "$page->{path}\n";
+        }
+    }
+
+    # HTMLの出力
     foreach my $page_YYYY (@{$album_source}) {
         # todo: YYYY.htmlの出力
 
@@ -245,7 +259,6 @@ sub write_photo_album {
                 urls  => $page->{urls}
             });
             push @pages_YYYYMMDD, $page;
-            print File::Spec->catfile($page->{dir}, $page->{file}), "\n"
         }
 
         print File::Spec->catfile($page_YYYY->{dir}, $page_YYYY->{file}), ': ', scalar(@pages_YYYYMMDD), "\n";
@@ -264,8 +277,7 @@ sub write_pages {
     }
 
     foreach my $page (@{$pages_ref}) {
-        my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
-        open( my $fp, '>', $path ) or die "cannot open > $path: $!";
+        open( my $fp, '>', $page->{path} ) or die "cannot open > $page->{path}: $!";
         print $fp encode_utf8( $page->{content} );
         close( $fp );
     }
