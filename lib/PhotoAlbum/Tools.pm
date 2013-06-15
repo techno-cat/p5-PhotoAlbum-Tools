@@ -18,7 +18,7 @@ sub get_photo_dir {
 
     my $photo_dir = ( exists $args->{dir} ) ? $args->{dir} : die '{dir} is required';
     my @ignore = ( exists $args->{ignore} ) ? @{$args->{ignore}} : ();
-    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '[\d]{8}'; # YYYYMMDD
+    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '[\d]{8}'; # default: YYYYMMDD
 
     return grep {
         my $sub_dir = $_;
@@ -36,7 +36,7 @@ sub write_thumb {
     my $args = shift;
 
     my $photo_dir = ( exists $args->{dir} ) ? $args->{dir} : die '{dir} is required';
-    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '(\.jpeg|\.jpg)$'; # Default: JPEG file
+    my $rule = ( exists $args->{rule} ) ? $args->{rule} : '(\.jpeg|\.jpg)$'; # default: JPEG file
     my @thumb_settings = ( exists $args->{thumb} ) ? @{$args->{thumb}} : die '{thumb} is required';
 
     foreach my $setting (@thumb_settings) {
