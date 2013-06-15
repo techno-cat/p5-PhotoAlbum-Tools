@@ -22,10 +22,10 @@ use Pod::Usage qw/pod2usage/;
 
     # config file
     {
-        dir => '/Users/(User Name)/foo/bar',
-        ignore => [ 'private' ],    # not Required
-        rule => '[\d]{8}',          # not Required
-        thumb => {
+        dir     => '/Users/(User Name)/foo/bar',
+        ignore  => [ 'private' ],   # not required (default: none)
+        rule    => '[\d]{8}',       # not required (default: '[\d]{8}')
+        thumb   => {
             large => {
                 dir => '/Users/(User Name)/hoge/large',
                 width => 1200
@@ -39,7 +39,8 @@ use Pod::Usage qw/pod2usage/;
                 width => 100
             }
         },
-        pages => {
+        log     => '/Users/(User Name)/hoge/log',
+        pages   => {
             'index' => {
                 dir  => '/Users/(User Name)/hoge/album',
                 file => 'index.html',
@@ -92,6 +93,14 @@ sub main {
 
     if ( not -e $config->{dir} ) {
         die 'Photo directory not found.'
+    }
+
+    if ( not $config->{'log'} ) {
+        die 'Photo directory not found.'
+    }
+
+    if ( not -e $config->{'log'} ) {
+        make_dir( $config->{'log'} );
     }
 
 #
