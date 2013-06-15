@@ -244,7 +244,6 @@ sub write_pages {
     }
 
     foreach my $page (@{$pages_ref}) {
-        my $content = shift;
         my $path = File::Spec->catfile( $page->{dir}, $page->{file} );
         open( my $fp, '>', $path ) or die "cannot open > $path: $!";
         print $fp encode_utf8( $page->{content} );
