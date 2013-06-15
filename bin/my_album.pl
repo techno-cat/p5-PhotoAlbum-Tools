@@ -69,6 +69,7 @@ sub main {
     GetOptions(
         \%opt,
         'config=s',
+        'update-thumb',
         'dry-run|n'
     ) or pod2usage( 1 );
 
@@ -86,6 +87,16 @@ sub main {
         #print 'config from album.config', "\n"
         $config = get_config( 'album.config');
     }
+
+    if ( $opt{'update-thumb'} ) {
+        update_thumb( $config );
+    }
+
+    # update_album( $config );
+}
+
+sub update_thumb {
+    my $config = shift;
 
     if ( not $config->{dir} ) {
         die 'Check your config.';
