@@ -18,7 +18,7 @@ use Pod::Usage qw/pod2usage/;
 
 =head1 SYNOPSIS
 
-    # output thumbnail and HTML.
+    # output thumbnail and log file.
     $ perl my_album.pl --update-thumb [--dry-run | -n] [--config] <config file>
 
     # output HTML from log files.
@@ -97,8 +97,9 @@ sub main {
     if ( $opt{'update-thumb'} ) {
         update_thumb( $config );
     }
-
-    update_album( $config );
+    else {
+        update_album( $config );
+    }
 }
 
 sub update_thumb {
