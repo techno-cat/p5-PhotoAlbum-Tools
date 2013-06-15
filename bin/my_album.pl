@@ -78,11 +78,6 @@ sub main {
         'dry-run|n'
     ) or pod2usage( 1 );
 
-    if ( $opt{'dry-run'} or $opt{n} ) {
-        print 'this is dry-run.', "\n";
-        $PhotoAlbum::Tools::dry_run = 1;
-    }
-
     my $config = ();
     if ( $opt{config} ) {
         #print 'config=', $opt{config}, "\n"
@@ -91,6 +86,12 @@ sub main {
     else {
         #print 'config from album.config', "\n"
         $config = get_config( 'album.config');
+    }
+
+    $config->{dry_run} = ( $opt{'dry-run'} or $opt{n} );
+    if ( $config->{dry_run} ) {
+        print 'this is dry-run.', "\n";
+        $PhotoAlbum::Tools::dry_run = 1;
     }
 
     if ( $opt{'update-thumb'} ) {
@@ -204,13 +205,46 @@ sub update_album {
     }
     closedir( $dh );
 
-    write_photo_album({
-        photo_dir => $config->{dir},
-        thumb     => $config->{thumb},
-        templ_dir => "$Bin/template",
-        pages     => $config->{pages},
-        logs      => \%logs
-    });
+    my $album_source = create_album_source( $config->{pages}, \%logs );
+    my $xslate = Text::Xslate->new(
+        path => [ "$Bin/template" ]
+    );
+
+    # パス情報の確定
+    my $page_index = $config->{pages}->{'index'};
+    $page_index->{path} = File::Spec->catfile( $page_index->{dir}, $page_index->{file} );
+#    print "$page_index->{path}\n";
+    foreach my $page_YYYY (@{$album_source}) {
+        $page_YYYY->{path} = File::Spec->catfile( $page_YYYY->{dir}, $page_YYYY->{file} );
+#        print "$page_YYYY->{path}\n";
+        foreach my $page (@{$page_YYYY->{children}}) {
+            $page->{path} = File::Spec->catfile( $page->{dir}, $page->{file} );
+#            print "$page->{path}\n";
+        }
+    }
+
+    # HTMLの出力
+    foreach my $page_YYYY (@{$album_source}) {
+        # todo: YYYY.htmlの出力
+
+        # YYYYMMDD.htmlの出力
+        my @pages_YYYYMMDD = ();
+        foreach my $page (@{$page_YYYY->{children}}) {
+            my $date = $page->{date};
+            $page->{content} = $xslate->render( $page->{template}, {
+                title => join( '/', $date->{YYYY}, $date->{MM}, $date->{DD} ),
+                urls  => $page->{urls}
+            });
+            push @pages_YYYYMMDD, $page;
+        }
+
+        print File::Spec->catfile($page_YYYY->{dir}, $page_YYYY->{file}), ': ', scalar(@pages_YYYYMMDD), "\n";
+        if ( not $config->{dry_run} ) {
+            write_pages( \@pages_YYYYMMDD );
+        }
+    }
+
+    # todo: index.htmlの出力
 }
 
 sub create_album_source {
@@ -258,49 +292,6 @@ sub create_album_source {
     }
 
     return \@pages_YYYY;
-}
-
-sub write_photo_album {
-    my $args_ref = shift;
-
-    my $album_source = create_album_source( $args_ref->{pages}, $args_ref->{logs} );
-    my $xslate = Text::Xslate->new(
-        path => [ $args_ref->{templ_dir} ]
-    );
-
-    # パス情報の確定
-    my $page_index = $args_ref->{pages}->{'index'};
-    $page_index->{path} = File::Spec->catfile( $page_index->{dir}, $page_index->{file} );
-#    print "$page_index->{path}\n";
-    foreach my $page_YYYY (@{$album_source}) {
-        $page_YYYY->{path} = File::Spec->catfile( $page_YYYY->{dir}, $page_YYYY->{file} );
-#        print "$page_YYYY->{path}\n";
-        foreach my $page (@{$page_YYYY->{children}}) {
-            $page->{path} = File::Spec->catfile( $page->{dir}, $page->{file} );
-#            print "$page->{path}\n";
-        }
-    }
-
-    # HTMLの出力
-    foreach my $page_YYYY (@{$album_source}) {
-        # todo: YYYY.htmlの出力
-
-        # YYYYMMDD.htmlの出力
-        my @pages_YYYYMMDD = ();
-        foreach my $page (@{$page_YYYY->{children}}) {
-            my $date = $page->{date};
-            $page->{content} = $xslate->render( $page->{template}, {
-                title => join( '/', $date->{YYYY}, $date->{MM}, $date->{DD} ),
-                urls  => $page->{urls}
-            });
-            push @pages_YYYYMMDD, $page;
-        }
-
-        print File::Spec->catfile($page_YYYY->{dir}, $page_YYYY->{file}), ': ', scalar(@pages_YYYYMMDD), "\n";
-        write_pages( \@pages_YYYYMMDD );
-    }
-
-    # todo: index.htmlの出力
 }
 
 sub write_pages {
