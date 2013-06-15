@@ -18,8 +18,11 @@ use Pod::Usage qw/pod2usage/;
 
 =head1 SYNOPSIS
 
-    $ perl my_album.pl [--dry-run | -n]
-    $ perl my_album.pl [--dry-run | -n] --config [config file]
+    # output thumbnail and HTML.
+    $ perl my_album.pl --update-thumb [--dry-run | -n] [--config] <config file>
+
+    # output HTML from log files.
+    $ perl my_album.pl [--dry-run | -n] [--config] <config file>
 
     # config file
     {
