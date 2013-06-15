@@ -103,11 +103,11 @@ sub update_thumb {
     }
 
     if ( not -e $config->{dir} ) {
-        die 'Photo directory not found.'
+        die 'Photo directory not found.';
     }
 
     if ( not $config->{'log'} ) {
-        die 'Photo directory not found.'
+        die 'Photo directory not found.';
     }
 
     if ( not -e $config->{'log'} ) {
