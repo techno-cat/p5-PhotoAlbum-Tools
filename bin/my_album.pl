@@ -239,7 +239,7 @@ sub update_album {
         foreach my $page (@{$page_YYYY->{children}}) {
             my $date = $page->{date};
             $page->{content} = $xslate->render( $page->{template}, {
-                title => join( '/', $date->{YYYY}, $date->{MM}, $date->{DD} ),
+                date  => $page->{date},
                 urls  => $page->{urls}
             });
             push @pages_YYYYMMDD, $page;
