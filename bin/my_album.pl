@@ -7,6 +7,7 @@ use FindBin qw($Bin);
 use Encode;
 use File::Spec;
 use File::Path qw(make_path);
+use Data::Dumper;
 
 use Getopt::Long qw/:config posix_default no_ignore_case bundling auto_help/;
 use Pod::Usage qw/pod2usage/;
@@ -64,8 +65,9 @@ use Pod::Usage qw/pod2usage/;
 main();
 
 sub main {
-    my %opt = ();
+    $Data::Dumper::Indent = 1;
 
+    my %opt = ();
     GetOptions(
         \%opt,
         'config=s',
@@ -92,7 +94,7 @@ sub main {
         update_thumb( $config );
     }
 
-    # update_album( $config );
+    update_album( $config );
 }
 
 sub update_thumb {
@@ -166,15 +168,45 @@ sub update_thumb {
             });
         }
 
-        $write_logs{$dir_YYYY} = \%logs;
+        if ( 0 < scalar(keys %logs) ) {
+            $write_logs{$dir_YYYY} = \%logs;
+        }
     }
+
+    # ログの書き出し
+    foreach my $key (keys %write_logs) {
+        my $path = File::Spec->catfile( $config->{'log'}, ($key . '.log') );
+        open( my $fp, '>', $path ) or die "cannot open > $path: $!";
+        print $fp encode_utf8( Dumper($write_logs{$key}) );
+        close( $fp );
+    }
+}
+
+sub update_album {
+    my $config = shift;
+
+    if ( not -e $config->{'log'} ) {
+        die 'Log directory not found.';
+    }
+
+    # ログの読み込み
+    my %logs = ();
+    opendir( my $dh, $config->{'log'} );
+    while ( readdir($dh) ) {
+        if ( /([\d]{4})/ ) {
+            my $key = $1;
+            my $path = File::Spec->catfile( $config->{'log'}, $_ );
+            $logs{$key} = do $path;
+        }
+    }
+    closedir( $dh );
 
     write_photo_album({
         photo_dir => $config->{dir},
         thumb     => $config->{thumb},
         templ_dir => "$Bin/template",
         pages     => $config->{pages},
-        logs      => \%write_logs
+        logs      => \%logs
     });
 }
 
