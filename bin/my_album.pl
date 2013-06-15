@@ -117,7 +117,9 @@ sub update_thumb {
     }
 
     if ( not -e $config->{'log'} ) {
-        make_dir( $config->{'log'} );
+        if ( not $config->{dry_run} ) {
+            make_dir( $config->{'log'} );
+        }
     }
 
 #
@@ -175,6 +177,10 @@ sub update_thumb {
         if ( 0 < scalar(keys %logs) ) {
             $write_logs{$dir_YYYY} = \%logs;
         }
+    }
+
+    if ( $config->{dry_run} ) {
+        return;
     }
 
     # ログの書き出し
