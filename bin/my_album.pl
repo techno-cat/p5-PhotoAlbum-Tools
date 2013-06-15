@@ -141,7 +141,7 @@ sub update_thumb {
     });
 
     my %write_logs = ();
-    foreach my $dir_YYYY (sort(@dir_YYYY_ary)) {
+    foreach my $dir_YYYY (@dir_YYYY_ary) {
         my @dir_YYYYMMDD_ary = PhotoAlbum::Tools::get_photo_dir({
             dir  => File::Spec->catdir( $config->{dir}, $dir_YYYY ),
             rule => $dir_YYYY . '[\d]{4}',
@@ -149,7 +149,7 @@ sub update_thumb {
         });
 
         my %logs = ();
-        foreach my $dir_YYYYMMDD (sort(@dir_YYYYMMDD_ary)) {
+        foreach my $dir_YYYYMMDD (@dir_YYYYMMDD_ary) {
             my @thumb_settings = map {
                 my $setting = $config->{thumb}->{$_};
                 {
