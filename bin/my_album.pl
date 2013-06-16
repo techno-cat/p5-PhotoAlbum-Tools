@@ -263,9 +263,12 @@ sub create_album_source {
 
         my @pages = ();
         foreach my $dir_YYYYMMDD (sort keys %{$logs_ref->{$dir_YYYY}}) {
+            my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
+            my %date = ( YYYY => $tmp[0], MM => $tmp[1], DD => $tmp[2] );
             my $page = replaced_page( $pages_ref->{'YYYYMMDD'}, [
-                { 'YYYYMMDD' => $dir_YYYYMMDD },
-                { 'YYYY' => $dir_YYYY }
+                { YYYY => $date{YYYY} },
+                { MM   => $date{MM}   },
+                { DD   => $date{DD}   }
             ]);
 
             # データ構造の変換
@@ -281,10 +284,9 @@ sub create_album_source {
             }
 
             my @sorted_urls = map { $photo_urls{$_}; } sort keys %photo_urls;
-            my @tmp = ( $dir_YYYYMMDD =~ m/^([\d]{4})([\d]{2})([\d]{2})/ );
 
             $page->{urls} = \@sorted_urls;
-            $page->{date} = { YYYY => $tmp[0], MM => $tmp[1], DD => $tmp[2] };
+            $page->{date} = \%date;
             push @pages, $page;
         }
 
