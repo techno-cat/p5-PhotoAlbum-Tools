@@ -34,8 +34,8 @@ use Pod::Usage qw/pod2usage/;
                 dir => '/Users/(User Name)/hoge/large',
                 width => 1200
             },
-            midium => {
-                dir => '/Users/(User Name)/hoge/midium',
+            medium => {
+                dir => '/Users/(User Name)/hoge/medium',
                 width => 400
             },
             small => {
