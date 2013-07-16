@@ -237,10 +237,14 @@ sub update_album {
         # YYYYMMDD.htmlの出力
         my @pages_YYYYMMDD = ();
         foreach my $page (@{$page_YYYY->{children}}) {
-            my $date = $page->{date};
             $page->{content} = $xslate->render( $page->{template}, {
-                date  => $page->{date},
-                urls  => $page->{urls}
+                paths => {
+                    'index' => '',
+                    parent  => '',
+                    this    => './'
+                },
+                date => $page->{date},
+                logs => $page->{logs}
             });
             push @pages_YYYYMMDD, $page;
         }
@@ -272,20 +276,19 @@ sub create_album_source {
             ]);
 
             # データ構造の変換
-            my %photo_urls = ();
+            my %photo_logs = ();
             foreach my $write_log (@{$logs_ref->{$dir_YYYY}->{$dir_YYYYMMDD}}) {
                 my ($volume, $directories, $file) = File::Spec->splitpath( $write_log->{path} );
-                if ( not (exists $photo_urls{$file}) ) {
-                    $photo_urls{$file} = {};
+                if ( not (exists $photo_logs{$file}) ) {
+                    $photo_logs{$file} = {};
                 }
 
-                my $url = File::Spec->abs2rel( $write_log->{path}, $page->{dir} );
-                $photo_urls{$file}->{$write_log->{key}} = $url;
+                $photo_logs{$file}->{$write_log->{key}} = $write_log;
             }
 
-            my @sorted_urls = map { $photo_urls{$_}; } sort keys %photo_urls;
+            my @sorted_logs = map { $photo_logs{$_}; } sort keys %photo_logs;
 
-            $page->{urls} = \@sorted_urls;
+            $page->{logs} = \@sorted_logs;
             $page->{date} = \%date;
             push @pages, $page;
         }

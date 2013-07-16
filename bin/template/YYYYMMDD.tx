@@ -9,8 +9,8 @@
 <section>
   <h2><: $date.YYYY :>/<: $date.MM :>/<: $date.DD :></h2>
   <ul>
-    : for $urls -> $url {
-    <li><a href="<: $url.large :>"><img src="<: $url.small :>" /></a></li>
+    : for $logs -> $log {
+    <li><a href="<: $log.large.path :>"><img src="<: $log.small.path :>" /></a></li>
     : }
   </ul>
 </dection>
